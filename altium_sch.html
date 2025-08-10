@@ -3,6 +3,7 @@
 <script type="text/javascript" src="base64_binary.js"></script>
 <script type="text/javascript" src="helper_extensions.js"></script>
 <script type="text/javascript" src="u8stream.js"></script>
+<script type="text/javascript" src="schdoc_ascii_converter.js"></script>
 <script type="text/javascript" src="ole.js"></script>
 <script type="text/javascript" src="altium_sch_document.js"></script>
 <script type="text/javascript" src="altium_sch_renderer.js"></script>
@@ -37,13 +38,31 @@ document.getElementById('altium-file').addEventListener('change', readSchematicF
 function renderSchematic(data)
 {
 	let canvas = document.getElementById("canvas");
-	let ole = new OLE(data);
-	let fhEntry = ole.directory_entries.find((de) => de.name == "FileHeader");
-	let fhData = fhEntry.read_all();
-	let altiumDocument = new AltiumDocument(fhData);
-	window.altiumDocument = altiumDocument;
-	let renderer = new AltiumSchematicRenderer(canvas, altiumDocument);
-	renderer.render();
+    try {
+        const u8 = new Uint8Array(data);
+        if (window.SchDocASCII && SchDocASCII.isProtelAsciiSchDoc(u8))
+        {
+            const fhU8 = SchDocASCII.convertProtelAsciiToFileHeaderStream(data);
+            const fhStream = new U8Stream(fhU8.buffer);
+            let altiumDocument = new AltiumDocument(fhStream);
+            window.altiumDocument = altiumDocument;
+            let renderer = new AltiumSchematicRenderer(canvas, altiumDocument);
+            renderer.render();
+            return;
+        }
+        // Default OLE path
+        let ole = new OLE(data);
+        let fhEntry = ole.directory_entries.find((de) => de.name == "FileHeader");
+        let fhData = fhEntry.read_all();
+        let altiumDocument = new AltiumDocument(fhData);
+        window.altiumDocument = altiumDocument;
+        let renderer = new AltiumSchematicRenderer(canvas, altiumDocument);
+        renderer.render();
+    } catch (err) {
+        const results = document.getElementById('results');
+        results.textContent = (err && err.message) ? err.message : String(err);
+        throw err;
+    }
 }
 </script>
 </body>

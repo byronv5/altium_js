@@ -361,57 +361,90 @@ class AltiumSchematicRenderer
 			ctx.lineWidth = 1;
 			if (!obj.is_off_sheet_connector)
 			{
+				ctx.save();
+				ctx.translate(obj.x, obj.y);
+				// For POWER_GND/SIGNAL_GND/EARTH we keep natural "downward" orientation to avoid upside-down GND
+				let rotateAngle = 0;
+				if (obj.style !== 4 && obj.style !== 5 && obj.style !== 6) {
+					// Align drawing orientation with Altium's orientation (0..3)
+					rotateAngle = (obj.orientation - 1) * Math.PI/2;
+				}
+				ctx.rotate(rotateAngle);
 				switch (obj.style)
 				{
+					// BAR (VCC style): draw a stem upward with a horizontal bar at the tip
 					case 2:
 						ctx.beginPath();
-						ctx.moveTo(obj.x, obj.y);
-						ctx.lineTo(obj.x, obj.y + 10);
+						ctx.moveTo(0, 0);
+						ctx.lineTo(0, 10);
 						ctx.stroke();
 						ctx.beginPath();
-						ctx.moveTo(obj.x - 5, obj.y + 10);
-						ctx.lineTo(obj.x + 5, obj.y + 10);
+						ctx.moveTo(-5, 10);
+						ctx.lineTo(5, 10);
 						ctx.stroke();
 						break;
+					// POWER_GND: three decreasing-width bars below (screen-down). In current canvas transform, down = negative Y.
 					case 4:
 						ctx.beginPath();
-						ctx.moveTo(obj.x - 10, obj.y);
-						ctx.lineTo(obj.x + 10, obj.y);
+						ctx.moveTo(-10, 0);
+						ctx.lineTo(10, 0);
 						ctx.stroke();
 						ctx.beginPath();
-						ctx.moveTo(obj.x - 7.5, obj.y - 2);
-						ctx.lineTo(obj.x + 7.5, obj.y - 2);
+						ctx.moveTo(-7.5, -2);
+						ctx.lineTo(7.5, -2);
 						ctx.stroke();
 						ctx.beginPath();
-						ctx.moveTo(obj.x - 5, obj.y - 4);
-						ctx.lineTo(obj.x + 5, obj.y - 4);
+						ctx.moveTo(-5, -4);
+						ctx.lineTo(5, -4);
 						ctx.stroke();
 						ctx.beginPath();
-						ctx.moveTo(obj.x - 2.5, obj.y - 6);
-						ctx.lineTo(obj.x + 2.5, obj.y - 6);
+						ctx.moveTo(-2.5, -6);
+						ctx.lineTo(2.5, -6);
 						ctx.stroke();
 						break;
-					case 6:
+					// SIGNAL_GND: treat as POWER_GND for drawing
+					case 5:
 						ctx.beginPath();
-						ctx.moveTo(obj.x, obj.y);
-						ctx.lineTo(obj.x, obj.y - 5);
+						ctx.moveTo(-10, 0);
+						ctx.lineTo(10, 0);
 						ctx.stroke();
 						ctx.beginPath();
-						ctx.moveTo(obj.x - 5, obj.y - 5);
-						ctx.lineTo(obj.x + 5, obj.y - 5);
+						ctx.moveTo(-7.5, -2);
+						ctx.lineTo(7.5, -2);
+						ctx.stroke();
+						ctx.beginPath();
+						ctx.moveTo(-5, -4);
+						ctx.lineTo(5, -4);
+						ctx.stroke();
+						ctx.beginPath();
+						ctx.moveTo(-2.5, -6);
+						ctx.lineTo(2.5, -6);
+						ctx.stroke();
+						break;
+					// EARTH: vertical stem down into a ground line with angled legs
+					case 6:
+						ctx.beginPath();
+						ctx.moveTo(0, 0);
+						ctx.lineTo(0, -5);
+						ctx.stroke();
+						ctx.beginPath();
+						ctx.moveTo(-5, -5);
+						ctx.lineTo(5, -5);
 						ctx.stroke();
 						for (let g = -1; g < 2; g++)
 						{
 							ctx.beginPath();
-							ctx.moveTo(obj.x + (g * 5), obj.y - 5);
-							ctx.lineTo(obj.x + (g * 5) - 3, obj.y - 10);
+							ctx.moveTo(g * 5, -5);
+							ctx.lineTo(g * 5 - 3, -10);
 							ctx.stroke();
 						}
 						break;
 					default:
-						ctx.fillRect(obj.x - 10, obj.y, 20, (obj.orientation == 1) ? 10 : -10);
+						// DEFAULT: small filled bar pointing "up" in local coords
+						ctx.fillRect(-10, 0, 20, 10);
 						break;
 				}
+				ctx.restore();
 			}
 			else
 			{
